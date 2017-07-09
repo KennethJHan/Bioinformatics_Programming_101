@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<snps>
+    <snp rsId="4988235" >
+        <ancestral_allele>G</ancestral_allele>
+        <minor_allele>A</minor_allele>
+        <MAF>0.161342</MAF>
+        <location>2:136608646-136608646</location>
+    </snp>
+    <snp rsId="182549" >
+        <ancestral_allele>C</ancestral_allele>
+        <minor_allele>T</minor_allele>
+        <MAF>0.163339</MAF>
+        <location>2:136616754-136616754</location>
+    </snp>
+</snps>

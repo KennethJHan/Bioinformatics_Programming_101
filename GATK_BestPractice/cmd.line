@@ -1,0 +1,33 @@
+/Users/jhan/Tools/bwa-0.7.15/bwa mem -R "@RG\tID:test\tSM:SRR000982\tPL:PlatformName" /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta SRR000982_1.filt.fastq.gz SRR000982_2.filt.fastq.gz > SRR000982.mapped.sam
+
+samtools view -Sb SRR000982.mapped.sam > SRR000982.mapped.bam
+
+./samtools sort -o SRR000982.mapped.sorted.bam SRR000982.mapped.bam
+
+java -jar picard.jar MarkDuplicates I=SRR000982.mapped.sorted.bam O=SRR000982.mapped.sorted.markdup.bam M=SRR000982.markdup.metrics.txt
+
+samtools index SRR000982.mapped.sorted.markdup.bam
+
+java -jar GenomeAnalysisTK.jar -T BaseRecalibrator -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -I SRR000982.mapped.sorted.markdup.bam -knownSites ~/Tools/GATK_bundle/dbsnp_138.hg19.vcf -knownSites ~/Tools/GATK_bundle/Mills_and_1000G_gold_standard.indels.hg19.sites.vcf -o SRR000982.mapped.sorted.markdup.recal.table
+
+java -jar GenomeAnalysisTK.jar -T PrintReads -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -I SRR000982.mapped.sorted.markdup.bam -BQSR SRR000982.mapped.sorted.markdup.recal.table -o SRR000982.mapped.sorted.markdup.recal.bam
+
+samtools index SRR000982.mapped.sorted.markdup.recal.bam
+
+## VARIANT CALLING
+java -jar GenomeAnalysisTK.jar -T HaplotypeCaller -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -I SRR000982.mapped.sorted.markdup.recal.bam --genotyping_mode DISCOVERY --emitRefConfidence GVCF --variant_index_type LINEAR --variant_index_parameter 128000 -stand_emit_conf 10 -stand_call_conf 30 -o SRR000982.g.vcf
+
+java -jar GenomeAnalysisTK.jar -T GenotypeGVCFs -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -V SRR000982.g.vcf -o SRR000982.raw.variants.vcf
+
+## Filter Variant
+java -jar GenomeAnalysisTK.jar -T SelectVariants -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -V SRR000982.raw.variants.vcf -selectType SNP -o SRR000982.raw.snps.vcf
+
+java -jar GenomeAnalysisTK.jar -T VariantFiltration -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -V SRR000982.raw.snps.vcf --filterExpression "QD<2.0 || MQ<40.0" -filterName "SNP_filter" -o SRR000982.filtered.snps.vcf
+
+java -jar GenomeAnalysisTK.jar -T SelectVariants -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -V SRR000982.raw.variants.vcf -selectType InDel -o SRR000982.raw.indels.vcf
+
+java -jar GenomeAnalysisTK.jar -T VariantFiltration -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -V SRR000982.raw.indels.vcf --filterExpression "QD<2.0 || FS>200.0" -filterName "InDel_filter" -o SRR000982.filtered.indels.vcf
+
+## Combine Variants
+java -jar GenomeAnalysisTK.jar -T CombineVariants -R /Users/jhan/Tools/Reference/hg19/ucsc.hg19.fasta -V SRR000982.filtered.snps.vcf -V SRR000982.filtered.indels.vcf -o SRR000982.filtered.variants.vcf
+
